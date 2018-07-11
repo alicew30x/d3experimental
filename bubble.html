@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="js/d3v3/d3.min.js"></script>
+		<script type="text/javascript" src="js/underscore-min.js"></script>
+		<link rel="stylesheet" href="styles.css">
+		<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
+	</head>
+	<body>
+		<div data-toggle="buttons">
+			<label class="btn" id="make">
+				<input type="radio" name="options">"Make"
+			</label>
+		</div>
+
+
+		<!-- bubble chart here -->
+		<div id="bubble"></div>
+
+
+		
+		<script type="text/javascript">
+
+		//force bubble chart
+		d3.csv('directory.csv', function(error, data){
+			var width = 800,
+				height = 800,
+				padding = 1.5,
+				clusterPadding = 6,
+				maxRadius = 12;
+
+			var color = d3.scale.ordinal()
+				.domain(["Corporate", "Clinical", "Hospital"]) //possibly optional
+				.range(["#80b1d3", "#fdb462", "#b3d269"]);
+
+			var svg = d3.select("#bubble").append("svg")
+				.attr("width", width)
+				.attr("height", height);
+
+			for (var j=0; j<data.length; j++) {
+				data[j].radius = +data[j].comb / 2;
+				data[j].x = Math.random() * width; 
+    			data[j].y = Math.random() * height;
+			}
+
+			var m = 3, //# of distinct clusters
+				ncorp = 21, // # corp groups
+				nclin = 39, // # clinical groups
+				nhos = 24, // # hospital groups
+				n = ncorp + nclin + nhos;
+
+			
+
+			// count of business area categories
+			var corporate = d3.nest()
+				.key(function(d) { return d.Corporate;})
+				.rollup(function(v) { return { total: v.length}; })
+				.entries(data);
+
+			var clinical = d3.nest()
+				.key(function(d) { return d.Clinical;})
+				.rollup(function(v) { return { total: v.length}; })
+				.entries(data);
+
+			var hospital = d3.nest()
+				.key(function(d) { return d.Hospital;})
+				.rollup(function(v) { return { total: v.length}; })
+				.entries(data);
+
+
+			function labels (centers) {
+			  svg.selectAll(".label").remove();
+
+			  svg.selectAll(".label")
+			  .data(centers).enter().append("text")
+			  .attr("class", "label")
+			  .text(function (d) { return d.name })
+			  .attr("transform", function (d) {
+			    return "translate(" + (d.x - ((d.name.length)*3)) + ", " + (d.y - d.r) + ")";
+			  });
+			}
+
+			function tick (centers, varname) {
+			  var foci = {}; // Making an object here for quick look-up
+			  for (var i = 0; i < centers.length; i++) {
+			    foci[centers[i].name] = centers[i];
+			  }
+			  return function (e) { //A
+			    for (var i = 0; i < data.length; i++) {
+			      var o = data[i];
+			      var f = foci[o[varname]];
+			      o.y += ((f.y + (f.dy / 2)) - o.y) * e.alpha;
+			      o.x += ((f.x + (f.dx / 2)) - o.x) * e.alpha;
+			    }
+			    nodes.each(collide(.11)) //B
+			      .attr("cx", function (d) { return d.x; })
+			      .attr("cy", function (d) { return d.y; });
+			  }
+			}
+
+			function getCenters (vname, size) {
+				var centers, map;
+				centers = _.uniq(_.pluck(data, vname)).map(function(d) {
+					return {name: d, value: 1};
+				});
+
+				map = d3.layout.treemap().size(size).ratio(1/1);
+				map.nodes({children: centers});
+
+				return centers;
+			}
+
+
+			function draw(varname) {
+				var centers = getCenters(varname, [800, 800]);
+				d3.force.on("tick", tick(centers, varname));
+				labels(centers)
+				d3.layout.force.start();
+			}
+
+
+			draw('make');
+			$(".btn").click(function() {
+				draw(this.id);
+			});
+
+
+
+
+			
+
+
+		});
+
+		</script>
+		
+
+
+
+	</body>
+</html>

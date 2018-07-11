@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="d3v3/d3.min.js">
+		</script>
+		<link rel="stylesheet" href="styles.css">
+		<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
+	</head>
+	<body>
+		<script type="text/javascript">
+		//load data
+		// d3.csv('directory.csv').then(function(data){
+		// 	console.log(data[0]);
+
+		// 	//count of MeantFor categories
+		// 	var categories = d3.nest()
+		// 		.key(function(d) { return d.MeantFor;})
+		// 		.rollup(function(v) { return {
+		// 			total: v.length
+		// 			}; })
+		// 		.entries(data);
+
+		// 	//piechart
+		// 	var piewidth = 400;
+		// 	var pieheight = 400;
+		// 	var pierad = Math.min(piewidth, pieheight) / 2;
+		// 	var color = d3.scaleOrdinal()
+		// 		.range(["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"]);
+
+		// 	var arc = d3.arc()
+		// 		.innerRadius(0)
+		// 		.outerRadius(pierad * 0.7);
+
+
+		// 	var labelArc = d3.arc()
+		// 		.innerRadius(pierad * 0.8)
+		// 		.outerRadius(pierad * 0.8);
+
+		// 	var svg = d3.select('#piechart')
+		// 		.append('svg')
+		// 		.attr('width', piewidth)
+		// 		.attr('height', pieheight)
+		// 		.append('g')
+		// 		.attr('transform', 'translate(' + (piewidth/2) + ',' + (pieheight/2) + ')');
+
+		// 	var pie = d3.pie()
+		// 		.value(function(d) { return d.value.total; });
+
+		// 	var g = svg.selectAll("arc")
+		// 		.data(pie(categories))
+		// 		.enter().append("g")
+		// 		.attr("class", "arc");
+
+		// 	g.append("path")
+		// 		.attr("d", arc)
+		// 		.style("fill", function (d,i) {return color(d.data.key);});
+
+		// 	g.append("text")
+		// 		.attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+		// 		.text(function(d) {return d.data.key;});
+
+		// });
+
+		//force bubble chart
+		d3.csv('directory.csv', function(error, data){
+			var width = 960,
+				height = 500,
+				padding = 1.5,
+				clusterPadding = 6,
+				maxRadius = 12;
+
+			for (var j=0; j<data.length; j++) {
+				data[j].radius = +data[j].comb / 2;
+				data[j].x = Math.random() * width; 
+    			data[j].y = Math.random() * height;
+			}
+
+			var m = 3, //# of distinct clusters
+				ncorp = 21, // # corp groups
+				nclin = 39, // # clinical groups
+				nhos = 24, // # hospital groups
+				n = ncorp + nclin + nhos;
+
+			var color = d3.scale.ordinal()
+				.domain(["Corporate", "Clinical", "Hospital"]) //possibly optional
+				.range(["#80b1d3", "#fdb462", "#b3d269"]);
+
+			//count of business area categories
+			// var corporate = d3.nest()
+			// 	.key(function(d) { return d.Corporate;})
+			// 	.rollup(function(v) { return { total: v.length}; })
+			// 	.entries(data);
+
+			// var clinical = d3.nest()
+			// 	.key(function(d) { return d.Clinical;})
+			// 	.rollup(function(v) { return { total: v.length}; })
+			// 	.entries(data);
+
+			// var hospital = d3.nest()
+			// 	.key(function(d) { return d.Hospital;})
+			// 	.rollup(function(v) { return { total: v.length}; })
+			// 	.entries(data);
+
+			var clusters = new Array(m);
+
+			var nodes = d3.range(n).map(function() {
+				var i = Math.floor(Math.random() * m),
+				r = Math.sqrt((i+1)/ m * -Math.log(Math.random())) * maxRadius,
+				d = { cluster: i, radius: r};
+			if (!clusters[i] || (r > clusters[i].radius)) clusters[i] = d;
+			return d;
+			});
+
+			d3.layout.pack()
+				.sort(null)
+				.size([width, height])
+				.children(function(d) { return d.values;})
+				.value(function(d) { return d.radius * d.radius;})
+				.nodes({ values: d3.nest()
+					.key(function(d) { return d.cluster;})
+					.entries(nodes)});
+
+			var force = d3.layout.force()
+				.nodes(nodes)
+				.size([width, height])
+				.gravity(.02)
+				.charge(0)
+				.on("tick", tick)
+				.start();
+
+			var svg = d3.select("body").append("svg")
+				.attr("width", width)
+				.attr("height", height);
+
+			var node = svg.selectAll("circle")
+    			.data(nodes)
+  				.enter().append("circle")
+    			.style("fill", function(d) { return color(d.cluster); })
+    			.call(force.drag);
+
+    		node.transition()
+			    .duration(750)
+			    .delay(function(d, i) { return i * 5; })
+			    .attrTween("r", function(d) {
+			      var i = d3.interpolate(0, d.radius);
+			      return function(t) { return d.radius = i(t); };
+			    });
+
+			function tick(e) {
+			  node
+		      .each(cluster(10 * e.alpha * e.alpha))
+		      .each(collide(.5))
+		      .attr("cx", function(d) { return d.x; })
+		      .attr("cy", function(d) { return d.y; });
+			}
+
+			// Move d to be adjacent to the cluster node.
+			function cluster(alpha) {
+			  return function(d) {
+			    var cluster = clusters[d.cluster];
+			    if (cluster === d) return;
+			    var x = d.x - cluster.x,
+			        y = d.y - cluster.y,
+			        l = Math.sqrt(x * x + y * y),
+			        r = d.radius + cluster.radius;
+			    if (l != r) {
+			      l = (l - r) / l * alpha;
+			      d.x -= x *= l;
+			      d.y -= y *= l;
+			      cluster.x += x;
+			      cluster.y += y;
+			    }
+			  };
+			}
+
+			// Resolves collisions between d and all other circles.
+			function collide(alpha) {
+			  var quadtree = d3.geom.quadtree(nodes);
+			  return function(d) {
+			    var r = d.radius + maxRadius + Math.max(padding, clusterPadding),
+			        nx1 = d.x - r,
+			        nx2 = d.x + r,
+			        ny1 = d.y - r,
+			        ny2 = d.y + r;
+			    quadtree.visit(function(quad, x1, y1, x2, y2) {
+			      if (quad.point && (quad.point !== d)) {
+			        var x = d.x - quad.point.x,
+			            y = d.y - quad.point.y,
+			            l = Math.sqrt(x * x + y * y),
+			            r = d.radius + quad.point.radius + (d.cluster === quad.point.cluster ? padding : clusterPadding);
+			        if (l < r) {
+			          l = (l - r) / l * alpha;
+			          d.x -= x *= l;
+			          d.y -= y *= l;
+			          quad.point.x += x;
+			          quad.point.y += y;
+			        }
+			      }
+			      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+			    });
+			  };
+			}
+
+
+		});
+
+
+		</script>
+
+		<!-- pie chart goes here -->
+		<div id="piechart"></div>
+
+		<!-- bubble chart here -->
+		<div id="bubble"></div>
+
+
+
+	</body>
+</html>
+

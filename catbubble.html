@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+	<script src='js/d3v3/d3.min.js'></script>
+	<script src='js/lodash.js'></script>
+<!-- 	<script type="module" src='js/d3-tip.js'></script>
+	<script type="module" src="js/jquery-3.3.1.js"></script> -->
+	<script src='js/bubble.js'></script>
+	
+
+	<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<h1>Business Areas</h1>
+	<div id="corp"></div>
+	<div id="clinical"></div>
+	<div id="hospital"></div>
+	<script>
+	// https://bl.ocks.org/ctufts/f38ef0187f98c537d791d24fda4a6ef9
+	//clustered bubb
+
+			//load data
+		d3.csv("directory.csv", function(error, rawdata){
+			// get totals for each category
+			var corpCount = d3.nest()
+				.key(function(d) { return d.corp; })
+				.rollup(function(v) { return v.length; })
+				.entries(rawdata);
+
+			var clinicalCount = d3.nest()
+				.key(function(d) { return d.clinical; })
+				.rollup(function(v) { return v.length; })
+				.entries(rawdata);
+
+			var hospitalCount = d3.nest()
+				.key(function(d) { return d.hospital; })
+				.rollup(function(v) { return v.length; })
+				.entries(rawdata);
+
+
+			// var corpCount = d3.nest()
+			// 	.key(function(d) { return d.corp; })
+			// 	.rollup(function(v) { return {
+			// 		count: v.length,
+			// 		category: "corporate"}; })
+			// 	.entries(rawdata);
+
+			// var clinicalCount = d3.nest()
+			// 	.key(function(d) { return d.clinical; })
+			// 	.rollup(function(v) { return {
+			// 		count: v.length,
+			// 		category: "clinical"}; })
+			// 	.entries(rawdata);
+
+			// var hospitalCount = d3.nest()
+			// 	.key(function(d) { return d.hospital; })
+			// 	.rollup(function(v) { return {
+			// 		count: v.length,
+			// 		category: "hospital"}; })
+			// 	.entries(rawdata);
+
+			//omit null values
+			var corpdata = corpCount.filter(function(d) {
+				if(d.key == ""){
+					return false;
+				}
+				return true;
+			});
+
+			var clinicaldata = clinicalCount.filter(function(d) {
+				if(d.key == ""){
+					return false;
+				}
+				return true;
+			});
+
+			var hospitaldata = hospitalCount.filter(function(d) {
+				if(d.key == ""){
+					return false;
+				}
+				return true;
+			});
+
+			var groupData = d3.merge([corpdata, clinicaldata, hospitaldata]);
+			console.log(groupData);
+
+			
+
+		//draw charts
+
+
+		bubbleChart(corpdata, "#corp");
+		bubbleChart(clinicaldata, "#clinical");
+		bubbleChart(hospitaldata, "#hospital");
+
+		// bubbleChart(groupData, "#corp");
+		});
+		
+		
+		
+	</script>
+</body>
+</html>

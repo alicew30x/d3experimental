@@ -1,0 +1,323 @@
+<!doctype html>
+<html>
+<head>
+	<script src='js//d3v3/d3.min.js'></script>
+	<script src='js/lodash.js'></script>
+
+	<link rel="stylesheet" href="styles.css">
+		<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
+</head>
+<body>
+	<!-- piechart of "Meant For" categories -->
+	<section class="chart" name="catpie">
+		<h1>Proportion of Site Types since Feb 2013</h1>
+		<div id="piechart"></div>
+		<div id="totalsites"></div>
+			<!-- date slider -->
+		<div id="slider"></div>
+	</section>
+
+	<script type="text/javascript">
+		var margin = {top: 0, right:50, bottom:0, left: 50},
+			piewidth = 600,
+			pieheight = 600,
+			pierad = Math.min(piewidth, pieheight) / 3,
+
+			sliderwidth = 600,
+			sliderheight = 100,
+			yearFormat = d3.time.format("%Y"),
+			monthYearFormat = d3.time.format("%B %Y"),
+
+			duration = 1000;
+
+
+		var color = d3.scale.ordinal()
+			.range(["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"]);
+		d3.csv("directory.csv", function(data){
+			//load data
+			data.forEach(function(d) {
+				d.sitename = d.sitename;
+				d.url = d.url;
+				d.meantfor = d.meantfor;
+				d.template = d.template;
+				d.corp = d.corp;
+				d.clinical = d.clinical;
+				d.hospital = d.hospital;
+				d.provDate = new Date(d["Site Provisioned Date"]);
+				d.provMonth = new Date(d["Site Provisioned Date"]).getMonth()+1; //getMonth starts from 0
+				d.provYear = new Date(d["Site Provisioned Date"]).getFullYear();
+				d.reviewMonth = new Date(d["Site Review Date"]).getMonth()+1;
+				d.reviewYear = new Date(d["Site Review Date"]).getFullYear();
+				d.modifyMonth = new Date(d.Modified).getMonth()+1;
+				d.modifyYear = new Date(d.Modified).getFullYear();
+			});
+
+			//group by corporate categories
+			// var corp = d3.nest()
+			// 	.key(function(d) { return d.corp; })
+			// 	.entries(data);
+
+			// //counts of entries for each corporate category
+			// var corpCount = d3.nest()
+			// 	.key(function(d) { return d.corp; })
+			// 	.rollup(function(v) { return v.length; })
+			// 	.entries(data);
+
+			// var clinical = d3.nest()
+			// 	.key(function(d) { return d.clinical; })
+			// 	.entries(data);
+
+			// var clinicalCount = d3.nest()
+			// 	.key(function(d) { return d.clinical; })
+			// 	.rollup(function(v) { return v.length; })
+			// 	.entries(data);
+
+			// var hospital = d3.nest()
+			// 	.key(function(d) { return d.hospital; })
+			// 	.entries(data);
+
+			// var hospitalCount = d3.nest()
+			// 	.key(function(d) { return d.hospital; })
+			// 	.rollup(function(v) { return v.length; })
+			// 	.entries(data);
+
+			//count of MeantFor categories
+			var categories = d3.nest()
+				.key(function(d) { return d.meantfor;})
+				.rollup(function(v) { return { total: v.length}; })
+				.entries(data);
+
+
+			// date slider
+						var startDate = d3.nest()
+							.rollup(function(v) { return d3.min(v, function(d){ return d.provDate;});})
+							.entries(data);
+						var endDate = d3.nest()
+							.rollup(function(v) { return d3.max(v, function(d){ return d.provDate;});})
+							.entries(data);
+
+						var svgSlider = d3.select("#slider")
+							.append("svg")
+							.attr("width", sliderwidth + margin.left + margin.right)
+							.attr("height", sliderheight);
+
+						var x = d3.time.scale()
+							.domain([startDate, endDate])
+							.range([0, sliderwidth])
+							.clamp(true);
+
+						var slider = svgSlider.append("g")
+							.attr("class", "slider")
+							.attr("transform", "translate(" + margin.left + "," + sliderheight/2 + ")");
+
+						slider.append("line")
+						    .attr("class", "track")
+						    .attr("x1", x.range()[0])
+						    .attr("x2", x.range()[1])
+						  	.select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+						    .attr("class", "track-inset")
+						  	.select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+						    .attr("class", "track-overlay")
+						    .call(d3.behavior.drag()
+						        .on("drag", function() { update(x.invert(d3.event.x), data); }));
+
+						slider.insert("g", ".track-overlay")
+						    .attr("class", "ticks")
+						    .attr("transform", "translate(0," + 18 + ")")
+						  	.selectAll("text")
+						    .data(x.ticks(10))
+						    .enter()
+						    .append("text")
+						    .attr("x", x)
+						    .attr("y", 10)
+						    .attr("text-anchor", "middle")
+						    .text(function(d) { return yearFormat(d); });
+
+						var handle = slider.insert("circle", ".track-overlay")
+						    .attr("class", "handle")
+						    .attr("r", 9)
+						    .style('right', x(endDate) + 'px');
+
+						var label = slider.append("text")  
+						    .attr("class", "label")
+						    .attr("text-anchor", "middle")
+						    .text(yearFormat(startDate))
+						    .attr("transform", "translate(0," + (-25) + ")")
+
+			//redraw chart with filtered data
+			function drawPlot(newdata) {
+				//rollup new data 
+			  	var newcats = d3.nest()
+				.key(function(d) { return d.meantfor;})
+				.rollup(function(v) { return { total: v.length}; })
+				.entries(newdata);
+
+				//remove existing chart
+				d3.select("#piechart svg").remove();
+				//redraw
+			  	var arc = d3.svg.arc()
+				.innerRadius(0)
+				.outerRadius(pierad * 0.7);
+
+				var labelArc = d3.svg.arc()
+					.innerRadius(pierad)
+					.outerRadius(pierad);
+
+				var svg = d3.select('#piechart')
+					.append('svg')
+					.attr('width', piewidth)
+					.attr('height', pieheight)
+					.append('g')
+					.attr('transform', 'translate(' + (piewidth/2) + ',' + (pieheight/2) + ')');
+
+				var pie = d3.layout.pie()
+					.value(function(d) { return d.values.total; })
+					.sort(null);
+
+				var g = svg.selectAll("arc")
+					.data(pie(newcats))
+					.enter().append("g")
+					.attr("class", "arc");
+
+				g.append("path")
+					.attr("d", arc)
+					.style("fill", function (d,i) {return color(d.data.key);});
+
+				g.append("text")
+					.attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+					.attr("text-anchor", "middle")
+					.text(function(d) {return d.data.key + " (" + d.data.values.total + ")";})
+
+				d3.select("#totalsites totalLabel").remove();
+
+				var totalLabel = d3.select("#totalsites")
+					.append('totalLabel')
+					.attr('width', piewidth)
+					.attr('height', pieheight/6);	
+
+				totalLabel.append('text')
+					.data(newcats)
+					.attr("transform", "translate(" + (piewidth/2) + ',' + 0 + ")")
+					.text(function(d) { return "Total sites: " + newdata.length; } );
+
+
+			  }
+
+			function update(h, indata) {
+			  // update position and text of label according to slider scale
+			  handle.attr("cx", x(h));
+			  label
+			    .attr("x", x(h))
+			    .text(monthYearFormat(h));
+			  // filter data set and redraw plot
+			  var newData = indata.filter(function(d) {
+			  	return ((d.provDate < h) || (d.provDate == "Invalid Date"));
+			  });
+			  
+			  drawPlot(newData);
+			}
+
+			//piechart
+			var arc = d3.svg.arc()
+				.innerRadius(0)
+				.outerRadius(pierad * 0.7);
+
+			var labelArc = d3.svg.arc()
+				.innerRadius(pierad * 0.9)
+				.outerRadius(pierad * 0.9);
+
+			var svg = d3.select('#piechart')
+				.append('svg')
+				.attr('width', piewidth)
+				.attr('height', pieheight)
+				.append('g')
+				.attr('transform', 'translate(' + (piewidth/2) + ',' + (pieheight/2) + ')');
+
+			var pie = d3.layout.pie()
+				.value(function(d) { return d.values.total; })
+				.sort(null);
+
+			var g = svg.selectAll("arc")
+				.data(pie(categories))
+				.enter().append("g")
+				.attr("class", "arc");
+
+			g.append("path")
+				.attr("d", arc)
+				.style("fill", function (d,i) {return color(d.data.key);});
+
+			g.append("text")
+				.attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+				.attr("text-anchor", "middle")
+				.text(function(d) {return d.data.key + " (" + d.data.values.total + ")";});
+
+			//total sites label
+			var totalLabel = d3.select("#totalsites")
+				.append('totalLabel')
+				.attr('width', piewidth)
+				.attr('height', pieheight/6);	
+
+			totalLabel.append('text')
+				.data(categories)
+				.attr("transform", "translate(" + (piewidth/2) + ',' + 0 + ")")
+				.text(function(d) { return "Total sites: " + data.length; } );
+
+			var outerArc = d3.svg.arc()
+			  .innerRadius(pierad +50)
+			  .outerRadius(pierad * .95);
+
+			function midAngle(d) {
+			  return d.startAngle + (d.endAngle - d.startAngle) / 2;
+			}
+
+			function updateLabelLines() {
+			  var polyline = d3.select(".lines").selectAll("polyline")
+			    .data(pie(getData()));
+
+			  //alert("I am an alert box!");
+
+			  polyline.enter()
+			    .append("polyline")
+
+			  polyline.transition()
+			    .duration(100)
+			    .attrTween("points", function(d) {
+			      this._current = this._current || d;
+			      var interpolate = d3.interpolate(this._current, d);
+			      this._current = interpolate(0);
+			      return function(t) {
+			        var d2 = interpolate(t);
+			        var pos = 0; // outerArc.centroid(d2);
+			       // pos[0] = radius * .95 * (midAngle(d2) < Math.PI ? 1 : -1);
+			       return [arc.centroid(d2), outerArc.centroid(d2)];
+			      };
+			    });
+
+			  polyline.exit()
+			    .remove();
+			}
+
+
+
+			// transition for the arcs
+				function arcTween(a) {
+				  var i = d3.interpolate(this._current, a);
+				  this._current = i(0);
+				  return function(t) {
+				    return arc(i(t));
+				  };
+				}
+		});
+	</script>
+</body>
+</html>
+
+<!-- js libraries/resources:
+data processing:
+http://learnjsdata.com
+http://www.pgbovine.net/parsing-raw-data.htm
+
+assertions - Chai, lodash, is.js, validate.io
+time - Moment
+strings - underscore
+ -->
