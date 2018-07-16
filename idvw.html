@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>D3 Page Template</title>
+	<script type="text/javascript" src="js/d3v3/d3.js"></script>
+<!-- 	<link rel="stylesheet" href="styles.css"> -->
+	<style type="text/css">
+		html {
+			font-family: Abel;
+		}
+		div.bar { 
+				display: inline-block; 
+				width: 20px; 
+				height: 75px; 
+				background-color: darkred; 
+				margin-right: 5px;
+			} 
+
+		circle {
+			fill: orange;
+			stroke: yellow;
+		}		
+	</style>
+	<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
+</head>
+<body>
+<script type="text/javascript">
+	var testdata; //global declaration 
+	var dataset = [25,7,26,31,14,1,23,19,11,22,9,6,7,10,25,3];
+
+	var rowConverter = function(d) { //all data is saved as string by default - convert numbers to float
+		return {
+			Food: d.food,
+			Deliciousness: parseFloat(d.deliciousness)
+		};
+	}
+
+	d3.csv("food.csv", rowConverter, function(error, data){ //load data
+		if(error) { //error handling
+			console.log(error);
+		} else {
+			console.log(data)
+		}
+
+		testdata = dataset;
+		barchart(testdata);
+		console.log(testdata);
+	})
+
+	function texttest(data) {
+		d3.select("body")//selects body element
+		.selectAll("p") //selects all p in DOM. but there's no p's yet so the empty selection represents what WILL exist
+		.data(testdata) //parse data
+		.enter() //takes data and DOM selection and creates new placeholder elements for each extra data element
+		.append("p") //append p for each placeholder from enter()
+		.text(function(d) {return "i'm actually " + d;})//insert text between p tags
+		.style("color", function(d){
+			if(d > 15) {
+				return "darkred";
+			} else {
+				return "purple";
+			}
+		}); //set css properties based on condition
+	}
+
+	function viztest(data) {
+		d3.select("body").selectAll("div") //create placeholder divs for data
+			.data(testdata)
+			.enter()
+			.append("div") //create divs for placeholders
+			.attr("class", "bar") //set div class to "bar"
+			.style("height", function(d) { //set heights for bars
+				return d*5 + "px";
+			});
+	}
+
+	function circletest(data) {
+		var w = 500,
+			h = 500;
+
+		var svg = d3.select("body").append("svg") //append svg to body
+			.attr("width", w) //set svg width and height
+			.attr("height", h);
+
+		var circles = svg.selectAll("circle") //add circles for each data point
+			.data(data)
+			.enter()
+			.append("circle");
+
+		circles.attr("r", function(d) {return d;}) //set circle size and position
+			.attr("cx", function(d, i) {
+				return (i*50) + 25;
+			})
+			.attr("cy", h/2)
+			.attr("stroke-width", function(d) { return d/2;});
+	}
+
+	function barchart(data) {
+		var w = 500,
+			h = 500,
+			padding = 2
+			scale = 10;
+
+		var svg = d3.select("body")
+			.append("svg")
+			.attr("width", w)
+			.attr("height", h);
+
+		svg.selectAll("rect")
+			.data(testdata)
+			.enter()
+			.append("rect")
+			.attr("x", function(d,i){
+				return i*(w/testdata.length); //dynamic bar widths adjust to data size
+			})
+			.attr("y", function(d) {
+				return h - d*scale; //height minus data value to make bars align at bottom
+			})
+			.attr("width", w/testdata.length - padding) //dynamic bar widths adjust to data size
+			.attr("height", function(d) {
+				return d*scale; //scale up
+			})
+			.attr("fill", function(d) {
+				return "rgb(60,40, " + Math.round(d*10) + ")"; //control color with data
+			});
+
+		svg.selectAll("text") //add labels
+			.data(testdata)
+			.enter()
+			.append("text")
+			.text(function(d) {
+				return d;
+			})
+			.attr("x", function(d,i) {
+				return i*(w/testdata.length) + (w/testdata.length - padding)/2; //centre labels
+			})
+			.attr("y", function(d) {
+				if(d<3) {
+					return (h - d*scale) -5; //move label above bar if value too small
+				} else {
+				return (h - d*scale) + 20; //adjust labels within bars
+				}
+			})
+			.attr("fill", function(d) {
+				if(d<3) {
+					return "#2d2d2d"; //black text if label above bar
+				} else {
+					return "white"; //otherwise white if within bar
+				}
+			})
+			.attr("text-anchor", "middle"); //centre labels
+	}
+
+
+
+
+</script>
+</body>
+</html>
