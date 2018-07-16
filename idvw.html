@@ -20,7 +20,11 @@
 		circle {
 			fill: orange;
 			stroke: yellow;
-		}		
+		}	
+
+		path.domain {
+			stroke-width: 1px;
+		}	
 	</style>
 	<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
 </head>
@@ -193,10 +197,10 @@
 			.attr("fill", "darkred");
 	}
 
-	function scaletest(data) {	
+	function scaleaxestest(data) {	
 		var w = 800,
 			h = 600,
-			padding = 20;
+			padding = 40;
 
 		var xScale = d3.scale.linear()
 			.domain([0, d3.max(data, function(d) { return d[0];} )] ) //set scale for xwith largest value in data
@@ -209,6 +213,16 @@
 		var rScale = d3.scale.linear()
 			.domain([0, d3.max(data, function(d) { return d[1]; } )] )
 			.range([2,5]) //restrict circle radius
+
+		var xAxis = d3.svg.axis() //add axis based on scale
+			.scale(xScale)
+			.ticks(5) //specify rough # of ticks on scale
+			.tickSize(1); //specify axis line thickness
+
+		var yAxis = d3.svg.axis() //repeat for y axis
+			.scale(yScale)
+			.orient("left")
+			.tickSize(1);
 
 		//modified scatterplot
 		var svg = d3.select("body")
@@ -245,9 +259,19 @@
 			})
 			.attr("font-size", "10px")
 			.attr("fill", "darkred");
+
+		svg.append("g")
+			.attr("class", "axis")
+			.attr("transform", "translate(0," + (h - padding) + ")") //x axis at bottom
+			.call(xAxis);
+
+		svg.append("g")
+			.attr("class", "axis")
+			.attr("transform", "translate(" + padding + ",0)")
+			.call(yAxis);
 	}
 
-	scaletest(scatterset);
+	scaleaxestest(scatterset);
 
 
 </script>
