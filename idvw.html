@@ -28,6 +28,7 @@
 <script type="text/javascript">
 	var testdata; //global declaration 
 	var dataset = [25,7,26,31,14,1,23,19,11,22,9,6,7,10,25,3];
+	var scatterset = [[5, 20], [480, 90], [250, 50], [100, 33], [330, 95], [410, 12], [475, 44], [25, 67], [85, 21], [220, 88]];
 
 	var rowConverter = function(d) { //all data is saved as string by default - convert numbers to float
 		return {
@@ -44,7 +45,7 @@
 		}
 
 		testdata = dataset;
-		barchart(testdata);
+		scatterplot(scatterset);
 		console.log(testdata);
 	})
 
@@ -66,7 +67,7 @@
 
 	function viztest(data) {
 		d3.select("body").selectAll("div") //create placeholder divs for data
-			.data(testdata)
+			.data(data)
 			.enter()
 			.append("div") //create divs for placeholders
 			.attr("class", "bar") //set div class to "bar"
@@ -108,7 +109,7 @@
 			.attr("height", h);
 
 		svg.selectAll("rect")
-			.data(testdata)
+			.data(data)
 			.enter()
 			.append("rect")
 			.attr("x", function(d,i){
@@ -150,6 +151,46 @@
 				}
 			})
 			.attr("text-anchor", "middle"); //centre labels
+	}
+
+	function scatterplot(data) {
+		var w = 500,
+			h = 100;
+
+		var svg = d3.select("body")
+			.append("svg")
+			.attr("width", w)
+			.attr("height", h);
+
+		svg.selectAll("circle") //draw data points
+			.data(data)
+			.enter()
+			.append("circle")
+			.attr("cx", function(d) {
+				return d[0]; //set circle x position from data
+			})
+			.attr("cy", function(d) {
+				return d[1]; //set circle y position from data
+			})
+			.attr("r", function(d) {
+				return Math.sqrt(h-d[1]); //set circle radius based on relative area calculated from y value
+			});
+
+		svg.selectAll("text") //add coordinate labels
+			.data(data)
+			.enter()
+			.append("text")
+			.text(function(d) {
+				return d[0] + "," + d[1]; 
+			})
+			.attr("x", function(d) {
+				return d[0];
+			})
+			.attr("y", function(d) {
+				return d[1];
+			})
+			.attr("font-size", "10px")
+			.attr("fill", "darkred");
 	}
 
 
