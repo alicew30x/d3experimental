@@ -24,6 +24,12 @@
 
 		path.domain {
 			stroke-width: 1px;
+		}
+
+		rect:hover {
+			transition: fill 0.4s ease-out;
+			fill: orange;
+
 		}	
 	</style>
 	<link href="https://fonts.googleapis.com/css?family=Abel" rel="stylesheet">
@@ -128,9 +134,9 @@
 			.data(data)
 			.enter()
 			.append("rect")
-			.transition()
-				.duration(500)
-				.ease("linear")
+			.on("click", function() {
+				sortBars();
+			})
 			.attr("x", function(d,i){
 				return xScale(i); //dynamic bar widths adjust to data size using scale
 			})
@@ -170,6 +176,35 @@
 				}
 			})
 			.attr("text-anchor", "middle"); //centre labels
+
+					function sortBars() {
+		svg.selectAll("rect")
+			.sort(function(a,b) {
+				return d3.ascending(a,b);
+			})
+			.transition()
+			.duration(1000)
+			.attr("x", function(d,i) {
+				return xScale(i);
+			});
+
+		svg.selectAll("text")
+			.sort(function(a,b) {
+				return d3.ascending(a,b);
+			})
+			.transition()
+			.duration(1000)
+			.attr("x", function(d,i) {
+				return xScale(i) + xScale.rangeBand()/2;
+			})
+			.attr("y", function(d){
+				if(d<3) {
+					return (h- yScale(d)) - 5;
+				} else {
+					return (h - yScale(d)) + 20;
+				}
+			});
+	}
 	}
 
 	function scatterplot(data) {
@@ -303,6 +338,8 @@
 				}
 			});
 	}
+
+
 
 
 </script>
