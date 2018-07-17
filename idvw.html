@@ -26,6 +26,7 @@
 			stroke-width: 1px;
 		}
 
+		/*using CSS instead of d3 for hover effects to avoid transition errors*/
 		rect:hover {
 			transition: fill 0.4s ease-out;
 			fill: orange;
@@ -37,7 +38,8 @@
 <body>
 <p>Click here to update chart with new data</p>
 <script type="text/javascript">
-	var datastate = 0;
+	var sortOrder = false;
+	var datastate = false;
 	var testdata = [ 11, 12, 15, 20, 18, 17, 16, 18, 23, 25, 5, 10, 13, 19, 21, 25, 22, 18, 15, 13 ];
 	var dataset = [25,7,26,31,14,1,23,19,11,22,9,6,7,10,25,3];
 	var scatterset = [[5, 20], [480, 90], [250, 50], [100, 33], [330, 95], [410, 12], [475, 44], [25, 67], [85, 21], [220, 88]];
@@ -177,33 +179,44 @@
 			})
 			.attr("text-anchor", "middle"); //centre labels
 
-					function sortBars() {
-		svg.selectAll("rect")
-			.sort(function(a,b) {
-				return d3.ascending(a,b);
-			})
-			.transition()
-			.duration(1000)
-			.attr("x", function(d,i) {
-				return xScale(i);
-			});
+			function sortBars() {
+				sortOrder = !sortOrder; //flip values
 
-		svg.selectAll("text")
-			.sort(function(a,b) {
-				return d3.ascending(a,b);
-			})
-			.transition()
-			.duration(1000)
-			.attr("x", function(d,i) {
-				return xScale(i) + xScale.rangeBand()/2;
-			})
-			.attr("y", function(d){
-				if(d<3) {
-					return (h- yScale(d)) - 5;
-				} else {
-					return (h - yScale(d)) + 20;
-				}
-			});
+				
+				svg.selectAll("rect") //reorder bars
+					.sort(function(a,b) {
+						if(sortOrder) {
+							return d3.ascending(a,b);
+						} else {
+							return d3.descending(a,b);
+						}
+					})
+					.transition()
+					.duration(1000)
+					.attr("x", function(d,i) {
+						return xScale(i);
+					});
+
+				svg.selectAll("text") //reorder text
+					.sort(function(a,b) {
+						if(sortOrder) {
+							return d3.ascending(a,b);
+						} else {
+							return d3.descending(a,b);
+						}
+					})
+					.transition()
+					.duration(1000)
+					.attr("x", function(d,i) {
+						return xScale(i) + xScale.rangeBand()/2;
+					})
+					.attr("y", function(d){
+						if(d<3) {
+							return (h- yScale(d)) - 5;
+						} else {
+							return (h - yScale(d)) + 20;
+						}
+				});
 	}
 	}
 
@@ -329,13 +342,13 @@
 	function switchdata() {
 		d3.select("p")
 			.on("click", function() {
-				if(datastate==0){
-					datastate = 1; //switch state indicator
-					return barchart(testdata);
+				if(datastate)  {
+					barchart(dataset);
 				} else {
-					datastate = 0;
-					return barchart(dataset);
+					barchart(testdata);
 				}
+				datastate = !datastate; //flip value
+
 			});
 	}
 
